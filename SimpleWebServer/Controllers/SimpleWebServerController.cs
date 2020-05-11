@@ -1,5 +1,4 @@
 ﻿using System;
-using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -26,27 +25,24 @@ namespace SimpleWebServer.Controllers
             return Ok("Server is Up!");
         }
 
-        private FileStream GetLocalFile(string fileLocation)
-        {
-            return new FileStream(
-                fileLocation,
-                FileMode.Open,
-                FileAccess.Read);
-        }
-        
         [HttpGet]
+        [HttpHead]
         [Route("{fileName}")]
         public IActionResult Get(string fileName)
         {
             try
             {
-                var fileStream = GetLocalFile($@"{_config["UrlBasePath"]}{fileName}");
+                var filePath = $"{_config["UrlBasePath"]}{fileName}";
+                var fileResponse = new FileStreamResult(System.IO.File.OpenRead(filePath), "application/octet-stream")
+                {
+                    EnableRangeProcessing = true
+                };
                 _logger.LogInformation($"Downloading {fileName}...");
-                return File(fileStream, "application/octet-stream");
+                return fileResponse;
             }
             catch (Exception ex)
             {
-                _logger.LogInformation($"The file: {fileName} doesn't exist.");
+                _logger.LogError($"The file: {fileName} doesn't exist.", ex);
             }
 
             return NotFound();
